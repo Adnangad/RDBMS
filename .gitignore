@@ -1,3 +1,4 @@
 db/memory.json
 venv/
 __pycache__/
+memory.json
