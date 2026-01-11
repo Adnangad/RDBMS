@@ -1,7 +1,7 @@
 """This module contains functions that parses the user input"""
 
 def parse_create_table(input_data):
-    """Handles creating of tables"""
+    """Handles CREATE statements"""
     input_data = input_data.strip()
     if not input_data.lower().startswith("create table"):
         return None
@@ -41,7 +41,7 @@ def parse_create_table(input_data):
     }
 
 def parse_insert(input_data):
-    """Handles inserting data into tables"""
+    """Handles INSERT statements"""
     input_data = input_data.strip()
 
     if not input_data.lower().startswith("insert into"):
@@ -77,7 +77,7 @@ def parse_insert(input_data):
     }
 
 def parse_select(input_data):
-    """Handles fetching of data"""
+    """Handles SELECT statements"""
     input_data = input_data.strip()
 
     if not input_data.lower().startswith("select"):
@@ -128,4 +128,53 @@ def parse_select(input_data):
         "table_name": table_name,
         "columns": columns,
         "where": whereClause
+    }
+
+def parse_update(input_data):
+    """Handles UPDATE statements"""
+    input_data = input_data.strip()
+
+    lower = input_data.lower()
+
+    if not lower.startswith("update") or "set" not in lower or "where" not in lower:
+        return None
+
+    if input_data.endswith(";"):
+        input_data = input_data[:-1]
+        lower = lower[:-1]
+
+    # get table name
+    update_len = len("update ")
+    set_idx = lower.index("set")
+    table_name = input_data[update_len:set_idx].strip()
+
+    # get the where and set parts
+    set_part = input_data[set_idx + len("set"):].strip()
+    where_idx = set_part.lower().index("where")
+
+    set_str = set_part[:where_idx].strip()
+    where_str = set_part[where_idx + len("where"):].strip()
+
+    # set column=value pairs
+    update_data = {}
+    for assignment in set_str.split(","):
+        if "=" not in assignment:
+            return None
+        col, val = assignment.split("=", 1)
+        update_data[col.strip()] = val.strip()
+
+    if "=" not in where_str:
+        return None
+
+    where_col, where_val = where_str.split("=", 1)
+
+    where_clause = {
+        "column": where_col.strip(),
+        "value": where_val.strip()
+    }
+
+    return {
+        "table_name": table_name,
+        "update_data": update_data,
+        "where": where_clause
     }

@@ -6,7 +6,7 @@ Engine module:
 - Updates the database and saves it in the memory file
 """
 
-from parser import parse_create_table, parse_insert, parse_select
+from parser import parse_create_table, parse_insert, parse_select, parse_update
 from pathlib import Path
 import json
 
@@ -147,7 +147,7 @@ def engine(input_data: str):
         if result["columns"] == ["*"]:
             return rows
         
-        # validate columns
+        # validates columns
         for col in result["columns"]:
             if col not in table["columns"]:
                 return f"Invalid column '{col}'"
@@ -157,6 +157,55 @@ def engine(input_data: str):
             projected.append({col: row[col] for col in result["columns"]})
             
         return projected
+    
+    """
+    Handles UPDATE
+    """
+    result = parse_update(input_data)
+    if result:
+        table_name = result["table_name"]
+        if table_name not in database:
+            return f"Error: Table '{table_name}' does not exist."
+        
+        table = database[table_name]
+        updated = 0
+        
+        where = result["where"]
+        col = where["column"]
+        val = where["value"]
+        
+        # ensure where clause column exists
+        if col not in table["columns"]:
+            return f"Invalid column '{col}' in WHERE clause"
+        
+        # ensure where clause value type is correct
+        col_type = table["types"][col]
+        python_type = PYTHON_TYPES[col_type]
+        
+        try:
+            val = python_type(val)
+        except ValueError:
+            return f"Invalid WHERE value type for column '{col}'"
+        
+        # start updating rows
+        for row in table["rows"]:
+            if row[col] == val:
+                for u_col, u_val in result["update_data"].items():
+                    # ensures the column to update exists
+                    if u_col not in table["columns"]:
+                        return f"Invalid column '{u_col}'"
+                    
+                    u_type = PYTHON_TYPES[table["types"][u_col]]
+                    
+                    try:
+                        row[u_col] = u_type(u_val)
+                    except ValueError:
+                        return f"Invalid value for column '{u_col}'"
+                
+                updated += 1
+        save_db(database)
+        return f"{updated} row(s) updated."
+                    
     
     """
     Fallback

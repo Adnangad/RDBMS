@@ -12,7 +12,7 @@ def main():
             continue
 
         if user_input.strip().lower() in ("exit", "quit"):
-            print("Goodbye 👋")
+            print("Goodbye")
             break
 
         result = engine(user_input)
