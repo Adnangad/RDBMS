@@ -6,7 +6,7 @@ Engine module:
 - Updates the database and saves it in the memory file
 """
 
-from parser import parse_create_table, parse_insert, parse_select, parse_update
+from parser import parse_create_table, parse_insert, parse_select, parse_update, parse_delete
 from pathlib import Path
 import json
 
@@ -205,7 +205,44 @@ def engine(input_data: str):
                 updated += 1
         save_db(database)
         return f"{updated} row(s) updated."
-                    
+    
+    """
+    Handles DELETE
+    """
+    result = parse_delete(input_data)
+    if result:
+        table_name = result["table_name"]
+        if table_name not in database:
+            return f"Error: Table '{table_name}' does not exist."
+        
+        table = database[table_name]
+        
+        where = result["where"]
+        col = where["column"]
+        val = where["value"]
+        
+        # ensure where clause column exists
+        if col not in table["columns"]:
+            return f"Invalid column '{col}' in WHERE clause"
+        
+        # ensure where clause value type is correct
+        col_type = table["types"][col]
+        python_type = PYTHON_TYPES[col_type]
+        
+        try:
+            val = python_type(val)
+        except ValueError:
+            return f"Invalid WHERE value type for column '{col}'"
+        
+        original_count = len(table["rows"])
+        
+        # deletes the rows that match the where condition
+        table["rows"] = [row for row in table["rows"] if row[col] != val]
+        deleted = original_count - len(table["rows"])
+
+        save_db(database)
+        return f"{deleted} row(s) deleted."
+        
     
     """
     Fallback

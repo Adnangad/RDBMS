@@ -1,4 +1,6 @@
-"""This module contains functions that parses the user input"""
+"""
+This module contains functions that parses the user input and handles the various sql statements
+"""
 
 def parse_create_table(input_data):
     """Handles CREATE statements"""
@@ -176,5 +178,41 @@ def parse_update(input_data):
     return {
         "table_name": table_name,
         "update_data": update_data,
+        "where": where_clause
+    }
+
+def parse_delete(input_data):
+    """Handles DELETE FROM"""
+    input_data = input_data.strip()
+    
+    if not input_data.lower().startswith("delete from") or "where" not in input_data.lower():
+        return None
+    
+    lower = input_data.lower()
+    
+    if input_data.endswith(";"):
+        input_data = input_data[:-1]
+        lower = lower[:-1]
+    
+    # get table name
+    delete_len = len("delete from ")
+    where_idx = lower.index("where")
+    table_name = input_data[delete_len: where_idx].strip()
+    
+    # handle the where clause
+    where_str = lower[where_idx + len("where"):].strip()
+    
+    if "=" not in where_str:
+        return None
+    
+    where_col, where_val = where_str.split("=", 1)
+
+    where_clause = {
+        "column": where_col.strip(),
+        "value": where_val.strip()
+    }
+    
+    return {
+        "table_name": table_name,
         "where": where_clause
     }
