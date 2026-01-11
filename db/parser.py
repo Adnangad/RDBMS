@@ -98,6 +98,7 @@ def parse_select(input_data):
     remainder = remainder.strip()
     
     whereClause = None
+    joinClause = None
     
     # handles where
     if "where" in remainder.lower():
@@ -114,6 +115,22 @@ def parse_select(input_data):
             "col": col.strip(),
             "val": val.strip()
         }
+    
+    # handles JOIN
+    if "join" in remainder.lower():
+        from_part, join_part = remainder.split("join", 1)
+        table_name = from_part.strip().split()[0]
+        
+        join_table, on_part = join_part.split("on", 1)
+        join_table = join_table.strip()
+        
+        left, right = on_part.split("=", 1)
+        joinClause = {
+            "table": join_table,
+            "left": left.strip(),
+            "right": right.strip()
+        }
+        
     else:
         table_name = remainder.split()[0]
         
@@ -129,7 +146,8 @@ def parse_select(input_data):
     return {
         "table_name": table_name,
         "columns": columns,
-        "where": whereClause
+        "where": whereClause,
+        "join": joinClause
     }
 
 def parse_update(input_data):

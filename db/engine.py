@@ -124,20 +124,44 @@ def engine(input_data: str):
         table = database[table_name]
         rows = table["rows"]
         
+        # handles join
+        join = result["join"]
+        
+        if join:
+            table_name2 = join["table"]
+            if table_name2 not in database:
+                return f"Error: Table '{table_name}' does not exist."
+            
+            table2 = database[table_name2]
+            
+            left_table, left_col = join["left"].split(".")
+            right_table, right_col = join["right"].split(".")
+
+            if left_table != table_name:
+                return "Invalid JOIN condition"
+            
+            joined_rows = []
+            
+            for r1 in table["rows"]:
+                for r2 in table2["rows"]:
+                    if r1[left_col] == r2[right_col]:
+                        combined = {}
+                        combined.update({f"{table_name}.{k}": v for k, v in r1.items()})
+                        combined.update({f"{table_name2}.{k}": v for k, v in r2.items()})
+                        joined_rows.append(combined)
+            rows = joined_rows
+        
         # handle where clause
         where = result["where"]
         if where:
             col = where["col"]
             val = where["val"]
-            
-            if col not in table["columns"]:
+
+            if rows and col not in rows[0]:
                 return f"Invalid column '{col}' in WHERE clause"
-            
-            col_type = table["types"][col]
-            python_type = PYTHON_TYPES[col_type]
 
             try:
-                val = python_type(val)
+                val = type(rows[0][col])(val)
             except ValueError:
                 return f"Invalid WHERE value type for column '{col}'"
 
@@ -147,17 +171,11 @@ def engine(input_data: str):
         if result["columns"] == ["*"]:
             return rows
         
-        # validates columns
-        for col in result["columns"]:
-            if col not in table["columns"]:
-                return f"Invalid column '{col}'"
-        
-        projected = []
-        for row in rows:
-            projected.append({col: row[col] for col in result["columns"]})
-            
-        return projected
-    
+        if rows:
+            for col in result["columns"]:
+                if col not in rows[0]:
+                    return f"Invalid column '{col}'"
+        return [{col: row[col] for col in result["columns"]} for row in rows]
     """
     Handles UPDATE
     """
