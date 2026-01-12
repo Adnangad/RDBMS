@@ -272,7 +272,7 @@ function Home() {
             <div className="main-container">
                 <header className="page-header">
                     <div className="header-content">
-                        <h1>📝 Task Manager</h1>
+                        <h1>Task Manager</h1>
                         <p>Manage your tasks efficiently</p>
                     </div>
                     <div className="header-actions">
@@ -369,9 +369,9 @@ function Home() {
                         </div>
                     )}
 
-                    {/* ===== CREATE TASK SECTION - ALL 4 INPUT FIELDS ===== */}
+                    {/* ===== CREATE TASK SECTION===== */}
                     <div className="section">
-                        <h2>➕ Create New Task</h2>
+                        <h2>Create New Task</h2>
                         <form onSubmit={createATask} className="task-form">
                             {/* FIELD 1: TITLE (Required) */}
                             <div className="form-group">
@@ -430,7 +430,7 @@ function Home() {
 
                     {/* View Tasks Section */}
                     <div className="section">
-                        <h2>📋 Your Tasks</h2>
+                        <h2>Your Tasks</h2>
                         
                         {/* Filter Section */}
                         <div className="filter-section">
@@ -463,7 +463,7 @@ function Home() {
                                 </select>
                             </div>
                             
-                            <button onClick={getTasks} className="btn-refresh">🔄 Refresh</button>
+                            <button onClick={getTasks} className="btn-refresh">Refresh</button>
                         </div>
 
                         <div className="task-list">
@@ -494,8 +494,8 @@ function Home() {
                                         )}
                                         
                                         <div className="task-meta">
-                                            <span>📌 Priority: <strong>{task.priority}</strong></span>
-                                            <span>🆔 ID: {task.id}</span>
+                                            <span> Priority: <strong>{task.priority}</strong></span>
+                                            <span> ID: {task.id}</span>
                                         </div>
                                         
                                         <div className="task-actions">
@@ -509,7 +509,7 @@ function Home() {
                                                 </button>
                                             )}
                                             <button onClick={() => deleteTask(task.id)} className="btn-danger">
-                                                🗑 Delete
+                                                 Delete
                                             </button>
                                         </div>
                                     </div>

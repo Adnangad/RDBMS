@@ -8,12 +8,12 @@ def parse_create_table(input_data):
     if not input_data.lower().startswith("create table"):
         return None
     
-    #get table name
+    # get table name
     start = len("create table ")
     open_paren = input_data.index("(")
     table_name = input_data[start:open_paren].strip()
     
-    #get column definitions
+    # get column definitions
     cols_str = input_data[open_paren+1 : input_data.index(")")].strip()
     columns_definitions = [c.strip() for c in cols_str.split(",")]
     
@@ -50,7 +50,7 @@ def parse_insert(input_data):
         return None
 
     try:
-        # Make the split case-insensitive
+        # make the split case-insensitive
         lower = input_data.lower()
         values_idx = lower.index("values")
         before_values = input_data[:values_idx]
@@ -82,6 +82,46 @@ def parse_insert(input_data):
         "rows": [row]
     }
 
+def parse_where_clause(where_part):
+    """Parse WHERE clause with AND support"""
+    conditions = []
+    
+    # split by 'and' (case insensitive)
+    and_parts = []
+    current = ""
+    where_lower = where_part.lower()
+    i = 0
+    
+    while i < len(where_part):
+        if i <= len(where_part) - 4 and where_lower[i:i+4] == " and":
+            # Check if next char is space or end
+            if i + 4 >= len(where_part) or where_part[i+4] == " ":
+                and_parts.append(current.strip())
+                current = ""
+                i += 4
+                continue
+        current += where_part[i]
+        i += 1
+    
+    if current.strip():
+        and_parts.append(current.strip())
+    
+    # parse each condition
+    for part in and_parts:
+        operator = None
+        for op in ['>=', '<=', '!=', '=', '>', '<']:
+            if op in part:
+                operator = op
+                col, val = part.split(op, 1)
+                conditions.append({
+                    "col": col.strip(),
+                    "op": operator,
+                    "val": val.strip().strip("'").strip('"')
+                })
+                break
+    
+    return conditions if conditions else None
+
 def parse_select(input_data):
     """Handles SELECT statements"""
     input_data = input_data.strip()
@@ -97,7 +137,7 @@ def parse_select(input_data):
     if "from" not in lower:
         return None
     
-    # Find FROM position in lowercase, but split original input
+    # find from position in lowercase, but split original input
     from_idx = lower.index("from")
     select_part = input_data[:from_idx].strip()
     remainder = input_data[from_idx + len("from"):].strip()
@@ -107,52 +147,41 @@ def parse_select(input_data):
     joinClause = None
     table_name = None
     
-    # Parse the remainder to find JOIN, WHERE, etc.
-    # Check for JOIN first (because we need to parse it before WHERE)
+    # parse the remainder to find join, where, etc
     if "join" in remainder_lower:
         join_idx = remainder_lower.index("join")
         
-        # Get the main table name (before JOIN)
+        # get the main table name (before join)
         from_part = remainder[:join_idx].strip()
         table_name = from_part.split()[0]
         
-        # Get everything after JOIN
+        # get everything after join
         after_join = remainder[join_idx + len("join"):].strip()
         after_join_lower = after_join.lower()
         
-        # Find ON clause
+        # find on clause
         if "on" not in after_join_lower:
             return None
         
         on_idx = after_join_lower.index("on")
         join_table = after_join[:on_idx].strip()
         
-        # Get everything after ON
+        # get everything after on
         after_on = after_join[on_idx + len("on"):].strip()
         after_on_lower = after_on.lower()
         
-        # Check if there's a WHERE clause after the JOIN
+        # check if there's a where clause after the join
         if "where" in after_on_lower:
             where_idx = after_on_lower.index("where")
             on_part = after_on[:where_idx].strip()
             where_part = after_on[where_idx + len("where"):].strip()
             
-            # Parse WHERE with comparison operators
-            operator = None
-            for op in ['>=', '<=', '!=', '=', '>', '<']:
-                if op in where_part:
-                    operator = op
-                    col, val = where_part.split(op, 1)
-                    whereClause = {
-                        "col": col.strip(),
-                        "op": operator,
-                        "val": val.strip().strip("'").strip('"')
-                    }
-                    break
+            # parse where with and support
+            whereClause = parse_where_clause(where_part)
         else:
             on_part = after_on.strip()
         
-        # Parse ON condition
+        # parse on condition
         if "=" not in on_part:
             return None
         
@@ -163,7 +192,7 @@ def parse_select(input_data):
             "right": right.strip()
         }
     
-    # No JOIN, check for WHERE
+    # no join, check for where
     elif "where" in remainder_lower:
         where_idx = remainder_lower.index("where")
         from_part = remainder[:where_idx].strip()
@@ -171,20 +200,10 @@ def parse_select(input_data):
         
         where_part = remainder[where_idx + len("where"):].strip()
         
-        # Parse WHERE with comparison operators
-        operator = None
-        for op in ['>=', '<=', '!=', '=', '>', '<']:
-            if op in where_part:
-                operator = op
-                col, val = where_part.split(op, 1)
-                whereClause = {
-                    "col": col.strip(),
-                    "op": operator,
-                    "val": val.strip().strip("'").strip('"')
-                }
-                break
+        # parse where with and support
+        whereClause = parse_where_clause(where_part)
     
-    # No JOIN or WHERE, just get table name
+    # no join or where, just get table name
     else:
         table_name = remainder.split()[0]
         
@@ -237,15 +256,11 @@ def parse_update(input_data):
         col, val = assignment.split("=", 1)
         update_data[col.strip()] = val.strip().strip("'").strip('"')
 
-    if "=" not in where_str:
+    # parse where with and support
+    where_clause = parse_where_clause(where_str)
+    
+    if not where_clause:
         return None
-
-    where_col, where_val = where_str.split("=", 1)
-
-    where_clause = {
-        "column": where_col.strip(),
-        "value": where_val.strip().strip("'").strip('"')
-    }
 
     return {
         "table_name": table_name,
@@ -274,15 +289,11 @@ def parse_delete(input_data):
     # handle the where clause
     where_str = input_data[where_idx + len("where"):].strip()
     
-    if "=" not in where_str:
-        return None
+    # parse where with and support
+    where_clause = parse_where_clause(where_str)
     
-    where_col, where_val = where_str.split("=", 1)
-
-    where_clause = {
-        "column": where_col.strip(),
-        "value": where_val.strip().strip("'").strip('"')
-    }
+    if not where_clause:
+        return None
     
     return {
         "table_name": table_name,

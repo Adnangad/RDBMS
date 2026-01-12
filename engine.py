@@ -2,7 +2,7 @@
 Engine module:
 - Receives raw SQL-like input
 - Uses parsers
-- Enforces constraints
+- Enforcess constraints
 - Updates the database and saves it in a JSON file
 - Supports indexing for primary keys and unique columns
 """
@@ -10,6 +10,18 @@ Engine module:
 from parser import parse_create_table, parse_insert, parse_select, parse_update, parse_delete
 from pathlib import Path
 import json
+import operator
+
+# Map strings operators to python functions
+ops = {
+    '>=': operator.ge,
+    '<=': operator.le,
+    '!=': operator.ne,
+    '=': operator.eq,
+    '==': operator.eq,
+    '>': operator.gt,
+    '<': operator.lt
+}
 
 file_path = Path("memory.json")
 
@@ -36,12 +48,108 @@ def save_db(database):
         json.dump(database, f, indent=2)
 
 
+def rebuild_indexes(table):
+    """Rebuild all indexes for a table from scratch"""
+    # clear existing indexes
+    for idx_col in table["indexes"]:
+        table["indexes"][idx_col] = {}
+    
+    # rebuild from rows
+    for row in table["rows"]:
+        for idx_col in table["indexes"]:
+            idx_val = row[idx_col]
+            table["indexes"][idx_col].setdefault(str(idx_val), []).append(row)
+
+
+def apply_where_conditions(rows, conditions, table=None, is_joined=False):
+    """Apply WHERE conditions to rows (supports AND)"""
+    if not conditions:
+        return rows
+    
+    # ensures conditions is a list (for backward compatibility)
+    if isinstance(conditions, dict):
+        conditions = [conditions]
+    
+    filtered_rows = rows
+    
+    for condition in conditions:
+        col = condition["col"]
+        val = condition["val"]
+        op = condition.get("op", "=")
+        
+        if is_joined:
+            # for joined tables, handle prefixed columns
+            if filtered_rows:
+                actual_col = None
+                if col in filtered_rows[0]:
+                    actual_col = col
+                else:
+                    # try with table prefix
+                    for potential_col in filtered_rows[0].keys():
+                        if potential_col.endswith("." + col):
+                            actual_col = potential_col
+                            break
+                
+                if actual_col is None:
+                    return []  # column not found
+                
+                try:
+                    val = type(filtered_rows[0][actual_col])(val)
+                except (ValueError, KeyError):
+                    return []
+                
+                # applys operator
+                if op == "=":
+                    filtered_rows = [r for r in filtered_rows if r.get(actual_col) == val]
+                elif op == "!=":
+                    filtered_rows = [r for r in filtered_rows if r.get(actual_col) != val]
+                elif op == ">":
+                    filtered_rows = [r for r in filtered_rows if r.get(actual_col) > val]
+                elif op == "<":
+                    filtered_rows = [r for r in filtered_rows if r.get(actual_col) < val]
+                elif op == ">=":
+                    filtered_rows = [r for r in filtered_rows if r.get(actual_col) >= val]
+                elif op == "<=":
+                    filtered_rows = [r for r in filtered_rows if r.get(actual_col) <= val]
+        else:
+            # for non-joined queries
+            if col not in table["columns"]:
+                return []
+            
+            col_type = table["types"][col]
+            python_type = PYTHON_TYPES[col_type]
+            try:
+                val = python_type(val)
+            except ValueError:
+                return []
+            
+            # use index for first condition if possible (equality only)
+            if filtered_rows == table["rows"] and op == "=" and col in table["indexes"]:
+                filtered_rows = table["indexes"][col].get(str(val), [])
+            else:
+                # apply operator
+                if op == "=":
+                    filtered_rows = [r for r in filtered_rows if r[col] == val]
+                elif op == "!=":
+                    filtered_rows = [r for r in filtered_rows if r[col] != val]
+                elif op == ">":
+                    filtered_rows = [r for r in filtered_rows if r[col] > val]
+                elif op == "<":
+                    filtered_rows = [r for r in filtered_rows if r[col] < val]
+                elif op == ">=":
+                    filtered_rows = [r for r in filtered_rows if r[col] >= val]
+                elif op == "<=":
+                    filtered_rows = [r for r in filtered_rows if r[col] <= val]
+    
+    return filtered_rows
+
+
 def engine(input_data: str):
     database = load_db()
     input_data = input_data.strip()
     
     """
-    Handles Create
+    handles create
     """
     result = parse_create_table(input_data)
     if result:
@@ -65,7 +173,7 @@ def engine(input_data: str):
             "indexes": {}
         }
 
-        # Initialize indexes on primary and unique columns
+        # initializes indexes on primary and unique columns
         for col in [result["primary_key"]] + result["unique_columns"]:
             if col:
                 database[table_name]["indexes"][col] = {}
@@ -74,7 +182,7 @@ def engine(input_data: str):
         return f"Table '{table_name}' created."
 
     """
-    Handles Insert
+    handles insert
     """
     result = parse_insert(input_data)
     if result:
@@ -85,7 +193,7 @@ def engine(input_data: str):
         table = database[table_name]
 
         for row in result["rows"]:
-            # Validate and cast types
+            # validates and cast types
             for col, val in row.items():
                 if col not in table["columns"]:
                     return f"Invalid column '{col}'"
@@ -96,33 +204,31 @@ def engine(input_data: str):
                 except ValueError:
                     return f"Invalid data type for column '{col}'"
 
-            # Enforce primary key (use string keys for JSON compatibility)
+            # enforces primary key (use string keys for json compatibility)
             pk = table["primary_key"]
             if pk:
                 pk_val = row[pk]
                 if pk in table["indexes"] and str(pk_val) in table["indexes"][pk]:
                     return f"Primary key '{pk}' violation"
 
-            # Enforce unique constraints (use string keys for JSON compatibility)
+            # enforces unique constraints (use string keys for json compatibility)
             for u_col in table["unique_columns"]:
                 if u_col and u_col in table["indexes"]:
                     u_val = row[u_col]
                     if str(u_val) in table["indexes"][u_col]:
                         return f"Unique constraint '{u_col}' violation"
 
-            # Append row
+            # append row
             table["rows"].append(row)
 
-            # Update indexes (use string keys for JSON compatibility)
-            for idx_col, idx_map in table["indexes"].items():
-                idx_val = row[idx_col]
-                idx_map.setdefault(str(idx_val), []).append(row)
-
+        # rebuild indexes after insertion
+        rebuild_indexes(table)
+        
         save_db(database)
         return f"{len(result['rows'])} row(s) inserted."
 
     """
-    Handles Select
+    handles select
     """
     result = parse_select(input_data)
     if result:
@@ -133,7 +239,7 @@ def engine(input_data: str):
         table = database[table_name]
         rows = table["rows"]
 
-        # Handle JOIN
+        # handle join
         join = result["join"]
         if join:
             table_name2 = join["table"]
@@ -157,89 +263,18 @@ def engine(input_data: str):
                         joined_rows.append(combined)
             rows = joined_rows
 
-        # Handle WHERE
+        # handles where with and support
         where = result["where"]
         if where:
-            col = where["col"]
-            val = where["val"]
-            op = where.get("op", "=")  # Default to equality if no operator specified
-
-            # For joined tables, column names have table prefix
             if join:
-                # Check if column exists in joined rows (might be prefixed)
-                if rows:
-                    # Try to find the column (with or without prefix)
-                    actual_col = None
-                    if col in rows[0]:
-                        actual_col = col
-                    else:
-                        # Try with table prefix
-                        for potential_col in rows[0].keys():
-                            if potential_col.endswith("." + col):
-                                actual_col = potential_col
-                                break
-                    
-                    if actual_col is None:
-                        return f"Invalid column '{col}' in WHERE clause"
-                    
-                    # Type conversion for joined rows
-                    try:
-                        val = type(rows[0][actual_col])(val)
-                    except (ValueError, KeyError):
-                        return f"Invalid WHERE value type for column '{col}'"
-                    
-                    # Apply comparison operator
-                    if op == "=":
-                        rows = [r for r in rows if r.get(actual_col) == val]
-                    elif op == "!=":
-                        rows = [r for r in rows if r.get(actual_col) != val]
-                    elif op == ">":
-                        rows = [r for r in rows if r.get(actual_col) > val]
-                    elif op == "<":
-                        rows = [r for r in rows if r.get(actual_col) < val]
-                    elif op == ">=":
-                        rows = [r for r in rows if r.get(actual_col) >= val]
-                    elif op == "<=":
-                        rows = [r for r in rows if r.get(actual_col) <= val]
-                else:
-                    rows = []
+                rows = apply_where_conditions(rows, where, is_joined=True)
             else:
-                # For non-joined queries, validate column exists
-                if col not in table["columns"]:
-                    return f"Invalid column '{col}' in WHERE clause"
-                
-                # Convert value to proper type using table schema
-                col_type = table["types"][col]
-                python_type = PYTHON_TYPES[col_type]
-                try:
-                    val = python_type(val)
-                except ValueError:
-                    return f"Invalid WHERE value type for column '{col}'"
+                rows = apply_where_conditions(rows, where, table=table, is_joined=False)
 
-                # Apply comparison operator
-                if op == "=" and col in table["indexes"]:
-                    # Use index only for equality
-                    rows = table["indexes"][col].get(str(val), [])
-                else:
-                    # For other operators or non-indexed columns, filter rows
-                    if op == "=":
-                        rows = [r for r in rows if r[col] == val]
-                    elif op == "!=":
-                        rows = [r for r in rows if r[col] != val]
-                    elif op == ">":
-                        rows = [r for r in rows if r[col] > val]
-                    elif op == "<":
-                        rows = [r for r in rows if r[col] < val]
-                    elif op == ">=":
-                        rows = [r for r in rows if r[col] >= val]
-                    elif op == "<=":
-                        rows = [r for r in rows if r[col] <= val]
-
-        # Handle SELECT *
+        # handles select *
         if result["columns"] == ["*"]:
             return rows
 
-        # Projection
         if rows:
             for col in result["columns"]:
                 if col not in rows[0]:
@@ -248,7 +283,7 @@ def engine(input_data: str):
 
     
     """
-    Handles Update
+    handles update
     """
     result = parse_update(input_data)
     if result:
@@ -260,45 +295,52 @@ def engine(input_data: str):
         updated = 0
 
         where = result["where"]
-        col = where["column"]
-        val = where["value"]
+        
+        # ensures where is a list
+        if isinstance(where, dict):
+            where = [where]
+        
+        # validates all WHERE conditions
+        for condition in where:
+            col = condition["col"]
+            if col not in table["columns"]:
+                return f"Invalid column '{col}' in WHERE clause"
 
-        if col not in table["columns"]:
-            return f"Invalid column '{col}' in WHERE clause"
+        # checks for unique constraint violations before updating
+        #rows_to_update = apply_where_conditions(table["rows"], where, table=table, is_joined=False)
+        
+        for u_col, u_val in result["update_data"].items():
+            if u_col not in table["columns"]:
+                return f"Invalid column '{u_col}'"
+                
+            # checks if this column has a unique constraint
+            if u_col == table["primary_key"] or u_col in table["unique_columns"]:
+                u_type = PYTHON_TYPES[table["types"][u_col]]
+                new_val = u_type(u_val)
+                    
+                # checks if this new value already exists in another row
+                for other_row in table["rows"]:
+                    if other_row.get(u_col) == new_val:
+                        if u_col == table["primary_key"]:
+                            return f"Primary key '{u_col}' violation"
+                        else:
+                            return f"Unique constraint '{u_col}' violation"
 
-        col_type = table["types"][col]
-        python_type = PYTHON_TYPES[col_type]
+        # performs the update
+        for row in table['rows']:
+            for u_col, u_val in result["update_data"].items():
+                u_type = PYTHON_TYPES[table["types"][u_col]]
+                row[u_col] = u_type(u_val)
+            updated += 1
 
-        try:
-            val = python_type(val)
-        except ValueError:
-            return f"Invalid WHERE value type for column '{col}'"
-
-        for row in table["rows"]:
-            if row[col] == val:
-                for u_col, u_val in result["update_data"].items():
-                    if u_col not in table["columns"]:
-                        return f"Invalid column '{u_col}'"
-                    u_type = PYTHON_TYPES[table["types"][u_col]]
-                    old_val = row[u_col]
-                    new_val = u_type(u_val)
-                    row[u_col] = new_val
-
-                    # Update indexes (use string keys for JSON compatibility)
-                    if u_col in table["indexes"]:
-                        if str(old_val) in table["indexes"][u_col]:
-                            table["indexes"][u_col][str(old_val)].remove(row)
-                            if not table["indexes"][u_col][str(old_val)]:
-                                del table["indexes"][u_col][str(old_val)]
-                        table["indexes"][u_col].setdefault(str(new_val), []).append(row)
-
-                updated += 1
+        # rebuilds indexes after update
+        rebuild_indexes(table)
 
         save_db(database)
         return f"{updated} row(s) updated."
 
     """
-    Handles Delete
+    handles delete
     """
     result = parse_delete(input_data)
     if result:
@@ -308,37 +350,38 @@ def engine(input_data: str):
 
         table = database[table_name]
         where = result["where"]
-        col = where["column"]
-        val = where["value"]
+        
+        # ensures where is a list
+        if isinstance(where, dict):
+            where = [where]
+        
+        original_count = len(table["rows"])
+        
+        # Validates all WHERE conditions and applys the filters
+        for condition in where:
+            col = condition["col"]
+            val = condition["val"]
+            op_str = condition["op"]
+            if col not in table["columns"]:
+                return f"Invalid column '{col}' in WHERE clause"
+            col_type = table["types"][col]
+            python_type = PYTHON_TYPES[col_type]
+            try:
+                val = python_type(val)
+            except ValueError:
+                return f"Invalid WHERE value type for column '{col}'"
+            print("Operator is: ", op_str)
+            table["rows"] = [row for row in table["rows"] if not ops[op_str](row[col], val)]
+            
 
-        if col not in table["columns"]:
-            return f"Invalid column '{col}' in WHERE clause"
+        deleted = original_count - len(table["rows"])
+        # rebuilds indexes after deletion
+        rebuild_indexes(table)
 
-        col_type = table["types"][col]
-        python_type = PYTHON_TYPES[col_type]
-        try:
-            val = python_type(val)
-        except ValueError:
-            return f"Invalid WHERE value type for column '{col}'"
-
-        # Delete rows and update indexes (use string keys for JSON compatibility)
-        rows_to_delete = [row for row in table["rows"] if row[col] == val]
-
-        for row in rows_to_delete:
-            for idx_col, idx_map in table["indexes"].items():
-                idx_val = row[idx_col]
-                if str(idx_val) in idx_map:
-                    idx_map[str(idx_val)].remove(row)
-                    if not idx_map[str(idx_val)]:
-                        del idx_map[str(idx_val)]
-
-        table["rows"] = [row for row in table["rows"] if row[col] != val]
-
-        deleted = len(rows_to_delete)
         save_db(database)
         return f"{deleted} row(s) deleted."
     
     """
-    Handles Fallback
+    handles fallback
     """
     return "Syntax error or unsupported command."
