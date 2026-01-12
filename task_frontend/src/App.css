@@ -1,0 +1,60 @@
+.body {
+  margin: 0;
+  padding: 0;
+}
+.container {
+  width: 100%;
+  border-radius: 3px solid black;
+}
+.rightSection {
+  float: left;
+  width: 47%;
+  padding-left: 70px;
+  justify-content: center;
+  font-family: "Playwrite DE Grund", cursive;
+  font-size: 20px;
+  padding-top: 65px;
+}
+.signupForm input {
+  width: 60%;
+  margin-bottom: 15px;
+  height: 30px;
+  border-radius: 5px;
+}
+.signBut {
+  width: 60%;
+  height: 30px;
+  border-radius: 6px;
+  background-color: greenyellow;
+  font-family: "Playwrite DE Grund", cursive;
+  margin-top: 40px;
+}
+.signBut:hover {
+  background-color: rgb(49, 94, 5);
+  cursor: pointer;
+}
+.imageBg {
+  background-image: url('../src/assets/images/plant.jpeg');
+  float: right;
+  width: 45%;
+  margin-right: 0px;
+  border-radius: 2px;
+  right: 0px;
+  margin-top: 0px;
+  height: 650px;
+}
+a {
+  list-style-type: none;
+  text-decoration: none;
+}
+a:hover {
+  color: green;
+}
+.error {
+  color: red;
+  font-family: "Playwrite DE Grund", cursive;
+}
+.success {
+  color: rgb(143, 238, 2);
+  font-family: "Playwrite DE Grund", cursive;
+}
