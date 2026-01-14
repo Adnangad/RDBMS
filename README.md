@@ -163,11 +163,11 @@ The server will start at `http://localhost:8000`
 **Start the React frontend:**
 
 ```bash
-cd frontend
-npm start
+cd task_frontend
+npm run dev
 ```
 
-The application will open at `http://localhost:3000`
+The application will open at `http://localhost:5173/`
 
 **Web App Features:**
 -  Create a new user
