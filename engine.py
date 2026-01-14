@@ -7,7 +7,7 @@ Engine module:
 - Supports indexing for primary keys and unique columns
 """
 
-from parser import parse_create_table, parse_insert, parse_select, parse_update, parse_delete
+from parser import parse_create_table, parse_insert, parse_select, parse_update, parse_delete, parse_drop_table
 from pathlib import Path
 import json
 import operator
@@ -381,6 +381,19 @@ def engine(input_data: str):
         save_db(database)
         return f"{deleted} row(s) deleted."
     
+    """
+    Handles Drop table
+    """
+    result = parse_drop_table(input_data)
+    if result:
+        table_name = result["table_name"]
+        if table_name not in database:
+            return f"Error: Table '{table_name}' does not exist."
+        # delete the table
+        del(database[table_name])
+        save_db(database)
+        return f"Successfully deleted table {table_name}"
+        
     """
     handles fallback
     """

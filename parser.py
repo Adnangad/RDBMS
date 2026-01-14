@@ -299,3 +299,22 @@ def parse_delete(input_data):
         "table_name": table_name,
         "where": where_clause
     }
+
+def parse_drop_table(input_data):
+    """Handles DROP TABLE statement"""
+    input_data = input_data.strip()
+    
+    if not input_data.lower().startswith("drop table "):
+        return None
+    
+    if input_data.endswith(";"):
+        input_data = input_data[:-1]
+    
+    table_name = input_data[len("drop table "):]
+    if len(table_name) < 1:
+        return None
+    return {
+        "table_name": table_name
+    }
+    
+    
