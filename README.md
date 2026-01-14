@@ -64,7 +64,7 @@ mini-rdbms/
 │   ├── RESTful API endpoints
 │   └── CRUD route handlers
 │
-├── frontend/             # React web application
+├── task_frontend/             # React web application
 │   ├── Task management UI
 │   └── Real-time SQL query display
 │
