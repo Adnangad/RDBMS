@@ -1,44 +1,45 @@
 # Mini RDBMS - A Custom Relational Database Management System
 A lightweight, educational relational database management system (RDBMS) implemented in Python with SQL-like syntax. Features an interactive REPL interface and a modern web application built with FastAPI and React.
 
-## 🎯 Project Overview
+##  Project Overview
 
 This project demonstrates the core concepts of relational database systems by implementing a functional RDBMS from scratch. It supports essential SQL operations, constraint enforcement, indexing, and persistence, all wrapped in an easy-to-use interface.
 
-## ✨ Features
+##  Features
 
 ### Core Database Features
 
-- **📊 Table Management**
+- **Table Management**
   - Create tables with multiple column types
   - Support for INT, VARCHAR, TEXT, FLOAT, DECIMAL, and BOOL data types
   - Primary key and unique constraints
 
-- **🔄 CRUD Operations**
+- **CRUD Operations**
   - `CREATE TABLE` - Define new table schemas
   - `INSERT INTO` - Add records to tables
   - `SELECT` - Query data with powerful filtering
   - `UPDATE` - Modify existing records
   - `DELETE FROM` - Remove records
+  - `DROP TABLE` - Delete tables
 
-- **⚡ Advanced Query Features**
+- **Advanced Query Features**
   - **Indexing**: Automatic index creation for primary keys and unique columns
   - **Query Optimization**: Index-based lookups for improved performance
   - **JOIN Operations**: INNER JOIN support with ON conditions
   - **WHERE Clauses**: Full comparison operator support (`=`, `!=`, `>`, `<`, `>=`, `<=`)
   - **Column Projection**: Select specific columns or use `SELECT *`
 
-- **💾 Persistence**
+- ** Persistence**
   - JSON-based storage (`memory.json`)
   - Automatic serialization and deserialization
   - Transaction-like behavior with immediate persistence
 
 ### User Interfaces
 
-- **🖥️ Interactive REPL**: Command-line interface for direct SQL interaction
-- **🌐 Web Application**: Modern task manager built with FastAPI backend and React frontend
+- **Interactive REPL**: Command-line interface for direct SQL interaction
+- **Web Application**: Modern task manager built with FastAPI backend and React frontend
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 mini-rdbms/
@@ -71,7 +72,7 @@ mini-rdbms/
 └── README.md            # Project documentation
 ```
 
-## 🚀 Getting Started
+## Getting Started
 
 ### Prerequisites
 
@@ -99,7 +100,7 @@ mini-rdbms/
    cd ..
    ```
 
-## 💻 Usage
+## Usage
 
 ### Option 1: Interactive REPL Mode
 
@@ -149,7 +150,7 @@ exit
 
 ### Option 2: Web Application
 
-The web application provides a visual interface for database operations through a task management system.
+The web application provides a visual interface for database operations through a task management system.It also has a user registration and login.
 
 **Start the FastAPI backend:**
 
@@ -169,14 +170,15 @@ npm start
 The application will open at `http://localhost:3000`
 
 **Web App Features:**
-- ➕ Create new tasks with title, description, and priority
-- 📋 View and filter tasks by status and priority
-- ✏️ Update task status (mark as complete or reopen)
-- 🗑️ Delete tasks
-- 📊 Real-time statistics dashboard
-- 🔍 Live SQL query visualization for educational purposes
+-  Create a new user
+-  Create new tasks with title, description, and priority
+-  View and filter tasks by status and priority
+-  Update task status (mark as complete or reopen)
+-  Delete tasks
+-  Real-time statistics dashboard
+-  Live SQL query visualization for educational purposes
 
-## 🏗️ Architecture
+##  Architecture
 
 ### 1. Parser Module (`parser.py`)
 
@@ -310,7 +312,7 @@ The system automatically creates indexes for:
 - Type mismatches raise descriptive errors
 - Consistent type handling across operations
 
-## 📊 Supported SQL Syntax
+##  Supported SQL Syntax
 
 ### CREATE TABLE
 ```sql
@@ -355,72 +357,6 @@ DELETE FROM table_name WHERE condition;
 
 **Comparison Operators:** `=`, `!=`, `>`, `<`, `>=`, `<=`
 
-## 🌐 API Documentation (FastAPI Backend)
-
-### Endpoints
-
-**Base URL:** `http://localhost:8000`
-
-#### Create Task
-```http
-POST /api/tasks
-Content-Type: application/json
-
-{
-    "title": "Task title",
-    "description": "Task description",
-    "priority": "High|Medium|Low"
-}
-
-Response:
-{
-    "success": true,
-    "sql": "INSERT INTO tasks ...",
-    "result": "1 row(s) inserted."
-}
-```
-
-#### Get Tasks
-```http
-GET /api/tasks?status=Pending&priority=High
-
-Response:
-{
-    "tasks": [...],
-    "sql": "SELECT * FROM tasks WHERE ..."
-}
-```
-
-#### Update Task
-```http
-PUT /api/tasks/{task_id}
-Content-Type: application/json
-
-{
-    "status": "Completed"
-}
-
-Response:
-{
-    "success": true,
-    "sql": "UPDATE tasks SET ...",
-    "result": "1 row(s) updated."
-}
-```
-
-#### Delete Task
-```http
-DELETE /api/tasks/{task_id}
-
-Response:
-{
-    "success": true,
-    "sql": "DELETE FROM tasks WHERE ...",
-    "result": "1 row(s) deleted."
-}
-```
-
-## 🧪 Testing Examples
 
 ### Basic CRUD Test
 ```python
@@ -455,7 +391,7 @@ engine("INSERT INTO users (id, email) VALUES (2, 'test@test.com');")
 # Output: "Unique constraint 'email' violation"
 ```
 
-## 🎓 Educational Value
+##  Educational Value
 
 This project demonstrates:
 
@@ -467,7 +403,7 @@ This project demonstrates:
 6. **API Design**: RESTful API principles with FastAPI
 7. **Modern Web Stack**: Integration of backend (FastAPI) and frontend (React)
 
-## ⚠️ Limitations
+##  Limitations
 
 This is an educational project with intentional simplifications:
 
@@ -482,7 +418,7 @@ This is an educational project with intentional simplifications:
 - **No Query Optimization**: Simple execution strategy only
 - **Limited Error Handling**: Basic error messages
 
-## 🚀 Future Enhancements
+##  Future Enhancements
 
 Potential improvements for learning or extension:
 
@@ -500,7 +436,7 @@ Potential improvements for learning or extension:
 - [ ] SQL injection prevention
 - [ ] Performance benchmarking tools
 
-## 🤝 Contributing
+##  Contributing
 
 Contributions are welcome! This is an educational project, so feel free to:
 
@@ -510,17 +446,17 @@ Contributions are welcome! This is an educational project, so feel free to:
 4. Push to the branch (`git push origin feature/AmazingFeature`)
 5. Open a Pull Request
 
-## 📝 License
+##  License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 🙏 Acknowledgments
+##  Acknowledgments
 
 - Inspired by classic RDBMS design principles
 - Built as a learning exercise in database systems
 - Thanks to the Python, FastAPI, and React communities
 
-## 📧 Contact
+##  Contact
 
 Project Link: [https://github.com/yourusername/mini-rdbms](https://github.com/yourusername/mini-rdbms)
 
