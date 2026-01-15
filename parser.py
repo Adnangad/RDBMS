@@ -317,4 +317,50 @@ def parse_drop_table(input_data):
         "table_name": table_name
     }
     
+def alter_table(input_data):
+    """Handles ALTER TABLE statement"""
+    input_data = input_data.strip()
+    lower = input_data.lower()
     
+    if not lower.startswith("alter table"):
+        return None
+    if "add" not in lower and "drop column" not in lower:
+        return None
+    
+    if input_data.endswith(";"):
+        input_data = input_data[:-1]
+        lower = lower[:-1]
+    
+    alter_type = None
+    if "add" in input_data.lower():
+        add_drop_idx = lower.index("add")
+        alter_type = "add"
+        keyword_len = len("add")
+    else:
+        add_drop_idx = lower.index("drop column")
+        alter_type = "drop"
+        keyword_len = len("drop column")
+    table_name = input_data[len("alter table "): add_drop_idx].strip()
+    
+    # handles drop column
+    if alter_type == "drop":
+        column_name = input_data[lower.index("drop column") + keyword_len:]
+        return {
+            "alter_type": alter_type,
+            "table_name": table_name.strip(),
+            "column": column_name.strip()
+        }
+    
+    # handles add column
+    elif alter_type == "add":
+        column_str = input_data[add_drop_idx + keyword_len:].strip()
+        parts = column_str.split()
+        if len(parts) >= 2:
+            column = parts[0]
+            data_type = parts[1]
+        return {
+            "alter_type": alter_type,
+            "table_name": table_name.strip(),
+            "column": column.strip(),
+            "data_type": data_type.strip().lower()
+        }

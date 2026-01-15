@@ -7,7 +7,7 @@ Engine module:
 - Supports indexing for primary keys and unique columns
 """
 
-from parser import parse_create_table, parse_insert, parse_select, parse_update, parse_delete, parse_drop_table
+from parser import parse_create_table, parse_insert, parse_select, parse_update, parse_delete, parse_drop_table, alter_table
 from pathlib import Path
 import json
 import operator
@@ -393,7 +393,61 @@ def engine(input_data: str):
         del(database[table_name])
         save_db(database)
         return f"Successfully deleted table {table_name}"
+    
+    """
+    Handles Alter table
+    """
+    result = alter_table(input_data)
+    if result:
+        table_name = result["table_name"]
+        if table_name not in database:
+            return f"Error: Table '{table_name}' does not exist."
+        table = database[table_name]
         
+        # handles if the alter_type is add
+        if result["alter_type"] == "add":
+            new_column = result["column"]
+            if new_column in table["columns"]:
+                return f"Invalid column '{new_column}': Column already exists"
+            
+            data_type = result["data_type"]
+            if data_type not in PYTHON_TYPES:
+                return f"Unsupported data_type '{data_type}'"
+            table["columns"].append(new_column)
+            table["types"][new_column] = data_type
+            
+            rebuild_indexes(table)
+            save_db(database)
+            return f"Column {new_column} successfully added to table {table_name}"
+        
+        # handles if the alter_type is drop
+        if result["alter_type"] == "drop":
+            old_column = result["column"]
+            # check if column exists
+            if old_column not in table["columns"]:
+                return f"Invalid column '{old_column}': Column doesn't exist"
+            
+            # handles if the column is a primary_key
+            if old_column in table["primary_key"]:
+                table["primary_key"].remove(old_column)
+                
+            # handles if the column is a unique column
+            if old_column in table["unique_columns"]:
+                table["unique_columns"].remove(old_column)
+                
+            table["columns"].remove(old_column)
+            
+            del(table["types"][old_column])
+            
+            if old_column in table["indexes"]:
+                del table["indexes"][old_column]
+            
+            for row in table["rows"]:
+                row.pop(old_column, None)
+            rebuild_indexes(table)
+            save_db(database)
+            return f"{old_column} removed from table {table_name}"
+            
     """
     handles fallback
     """

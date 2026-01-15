@@ -1,4 +1,4 @@
-# Mini RDBMS - A Custom Relational Database Management System
+# RDBMS - A Custom Relational Database Management System
 A lightweight, educational relational database management system (RDBMS) implemented in Python with SQL-like syntax. Features an interactive REPL interface and a modern web application built with FastAPI and React.
 
 ##  Project Overview
@@ -21,6 +21,7 @@ This project demonstrates the core concepts of relational database systems by im
   - `UPDATE` - Modify existing records
   - `DELETE FROM` - Remove records
   - `DROP TABLE` - Delete tables
+  - `ALTER TABLE` - Alters table columns
 
 - **Advanced Query Features**
   - **Indexing**: Automatic index creation for primary keys and unique columns
@@ -56,6 +57,8 @@ mini-rdbms/
 │   ├── SELECT parser (with JOIN/WHERE)
 │   ├── UPDATE parser
 │   └── DELETE parser
+    └── DROP TABLE parser
+    └── ALTER TABLE parser (with ADD/DROP COLUMN)
 │
 ├── repl.py               # Interactive REPL interface
 │   └── Command-line SQL executor
@@ -144,6 +147,15 @@ SELECT * FROM users JOIN orders ON users.id = orders.user_id WHERE amount > 100;
 -- Delete a record
 DELETE FROM users WHERE id = 1;
 
+-- Drop a table
+DROP TABLE users;
+
+-- Add a column
+ALTER TABLE users ADD email VARCHAR;
+
+-- Drop a column
+ALTER TABLE users DROP COLUMN salary;
+
 -- Exit the REPL
 exit
 ```
@@ -208,6 +220,14 @@ The parser converts SQL-like strings into structured Python dictionaries that th
 - **`parse_delete(input_data)`**
   - Parses DELETE FROM statements with WHERE
   - Returns: `{"table_name": str, "where": dict}`
+  
+- **`parse_drop_table(input_data)`**
+  - Parses DROP TABLE statements
+  - Returns: `{"table_name": str}`
+
+- **`alter_table(input_data)`**
+  - Parses ALTER TABLE statements with ADD or DROP COLUMN
+  - Returns: `{"table_name": str, "alter_type": str, "column": str, "data_type"?: str}`
 
 ### 2. Engine Module (`engine.py`)
 
@@ -355,6 +375,20 @@ UPDATE table_name SET col1 = val1, col2 = val2 WHERE condition;
 DELETE FROM table_name WHERE condition;
 ```
 
+### DROP
+```sql
+DROP TABLE table_name;
+```
+
+### ALTER
+```sql
+-- Add column
+ALTER TABLE table_name ADD column_name data_type;
+
+-- Delete Column
+ALTER TABLE table_name DROP COLUMN column_name;
+```
+
 **Comparison Operators:** `=`, `!=`, `>`, `<`, `>=`, `<=`
 
 
@@ -458,8 +492,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ##  Contact
 
-Project Link: [https://github.com/yourusername/mini-rdbms](https://github.com/yourusername/mini-rdbms)
-
----
-
-**Note:** This is an educational implementation meant for learning purposes. For production use cases, please use established database systems like PostgreSQL, MySQL, or SQLite.
+Project Link: [https://github.com/Adnangad/RDBMS](https://github.com/Adnangad/RDBMS)
